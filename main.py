@@ -1,19 +1,17 @@
 import json
 import sqlite3
 
+from db.adaptor import SqliteAdaptor
+from db.station import Station
+
 
 def main():
+    adaptor = SqliteAdaptor()
     file = open("korea_subway.json", encoding='utf-8')
     json_data = json.load(file)
 
-    # DB
-    db = sqlite3.connect('./pubtrans4watch.db')
-    cur = db.cursor()
-
     # 초기화
-    cur.execute('''
-    DELETE FROM POSITION
-    ''')
+    adaptor.clean()
 
     print(json_data['fields'])
 
@@ -21,8 +19,7 @@ def main():
         print(info)
 
         # 기존 데이터가 존재하면 pass
-        cur.execute('SELECT * FROM POSITION WHERE STATION_NAME=:station_name', {'station_name': info['역사명']})
-        if len(cur.fetchall()) != 0:
+        if adaptor.is_exist('STATION', 'NAME', info['역사명']):
             continue
 
         # INSERT
@@ -31,16 +28,8 @@ def main():
             info['역사명'] = info['역사명'][:-1]
 
         # 쿼리 수행
-        cur.execute(
-            '''
-            INSERT INTO POSITION (TYPE, LATITUDE, LONGITUDE, STATION_NAME, LINE_NUM)
-            VALUES (?, ?, ?, ?, ?)
-            ''',
-            (1, info['역위도'], info['역경도'], info['역사명'], info['노선명'])
-        )
-
-    cur.close()
-    db.commit()
+        station_info = Station('지하철', info['역위도'], info['역경도'], info['역사명'])
+        adaptor.insert_station_info(station_info)
 
 
 # Press the green button in the gutter to run the script.
